@@ -1,0 +1,22 @@
+{
+  "name": "cinecritic",
+  "version": "1.0.0",
+  "description": "Movie Rating API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["movies", "api", "rating", "mongodb"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.1.0",
+    "mongodb": "^7.0.0",
+    "mongoose": "^8.19.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}

@@ -20,7 +20,7 @@ function initAuthUI() {
 
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-            window.location.href = 'http://127.0.0.1:5500/login/login.html';
+            window.location.href = '../login/login.html';
         });
     }
 
@@ -29,16 +29,16 @@ function initAuthUI() {
             localStorage.removeItem('token');
             localStorage.removeItem('role');
             localStorage.removeItem('user');
-            window.location.href = 'http://127.0.0.1:5500/login/login.html';
+            window.location.href = '../login/login.html';
         });
     }
 
     if (adminNav) {
         adminNav.addEventListener('click', () => {
             if (!localStorage.getItem('token')) {
-                window.location.href = 'http://127.0.0.1:5500/login/login.html';
+                window.location.href = '../login/login.html';
             } else {
-                window.location.href = 'http://127.0.0.1:5500/admin/admin.html';
+                window.location.href = '../admin/admin.html';
             }
         });
     }
@@ -65,7 +65,7 @@ async function authenticatedFetch(url, options = {}) {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('user');
-        window.location.href = 'http://127.0.0.1:5500/login/login.html';
+        window.location.href = '../login/login.html';
         throw new Error('Session expired. Please login again.');
     }
     

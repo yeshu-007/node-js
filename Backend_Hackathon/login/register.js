@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if already logged in
     const token = localStorage.getItem('token');
     if (token) {
-        window.location.href = 'http://127.0.0.1:5500/main/index.html';
+        window.location.href = '../main/index.html';
     }
 });
 
@@ -87,7 +87,7 @@ async function handleRegister(e) {
             console.log('Registration successful response:', data);
             showSuccess('Registration successful! Redirecting to login...', successMsg);
             setTimeout(() => {
-                window.location.href = 'http://127.0.0.1:5500/login/login.html';
+                window.location.href = './login.html';
             }, 1500);
         } else {
             const message = data?.message || data?.error || 'Registration failed. Please try again.';

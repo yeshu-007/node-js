@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const loggerMiddleware = require('./middleware/logger');
+const seedDatabase = require('./utils/seedDatabase');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -16,6 +17,9 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 connectDB();
+
+// Seed database with test users
+seedDatabase();
 
 // Middleware
 app.use(express.json());

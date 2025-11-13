@@ -14,14 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if already logged in
     const token = localStorage.getItem('token');
     if (token) {
-        window.location.href = 'http://127.0.0.1:5500/main/index.html';
+        window.location.href = '../main/index.html';
     }
 });
 
 async function handleLogin(e) {
     e.preventDefault();
 
-    const username = document.getElementById('username').value.trim();
+    const usernameOrEmail = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorMsg = document.getElementById('errorMessage');
     const successMsg = document.getElementById('successMessage');
@@ -31,7 +31,7 @@ async function handleLogin(e) {
     errorMsg.classList.add('hidden');
     successMsg.classList.add('hidden');
 
-    if (!username || !password) {
+    if (!usernameOrEmail || !password) {
         showError('Please fill in all fields', errorMsg);
         return;
     }
@@ -41,17 +41,21 @@ async function handleLogin(e) {
         loginBtn.classList.add('loading');
         loginBtn.textContent = 'Logging in...';
 
-        console.log('Attempting login with:', { username, apiBase: API_BASE });
+        // Determine if input is email or username
+        const isEmail = usernameOrEmail.includes('@');
+        const bodyData = {
+            ...(isEmail ? { email: usernameOrEmail } : { username: usernameOrEmail }),
+            password: password
+        };
+
+        console.log('Attempting login with:', { ...bodyData, apiBase: API_BASE });
 
         const response = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                username: username,
-                password: password
-            })
+            body: JSON.stringify(bodyData)
         });
 
         console.log('Response status:', response.status);
@@ -82,8 +86,8 @@ async function handleLogin(e) {
 
             const userRole = receivedUser?.role || localStorage.getItem('role') || 'user';
             const redirectUrl = userRole === 'admin'
-                ? 'http://127.0.0.1:5500/admin/admin.html'
-                : 'http://127.0.0.1:5500/main/index.html';
+                ? '../admin/admin.html'
+                : '../main/index.html';
 
             console.log('Redirecting to:', redirectUrl);
 

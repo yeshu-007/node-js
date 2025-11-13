@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Trends - Battery Health Monitor</title>
+    <link rel="stylesheet" href="hist_style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="http://127.0.0.1:5500/main/index.html" class="nav-item">Dashboard</a>
+        <a href="http://127.0.0.1:5500/history/history.html" class="nav-item active">Historical Trends</a>
+        <a id="adminNav" class="nav-item">Admin</a>
+        <a id="loginBtn" class="nav-item">Login</a>
+        <a id="logoutBtn" class="nav-item" style="display:none;">Logout</a>
+    </nav>
+
+    
+    <main class="main-container">
+        
+        <h1 class="page-title">Historical Trends</h1>
+
+        <
+        <div class="cell-selector">
+            <label for="cellSelector">Select Cell:</label>
+            <select id="cellSelector">
+                
+            </select>
+        </div>
+
+        
+        <div class="charts-grid">
+            
+            <div class="chart-card">
+                <h2 class="chart-title">Voltage (Last 30 Days)</h2>
+                <div class="chart-wrapper">
+                    <canvas id="voltageChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Temperature Chart -->
+            <div class="chart-card">
+                <h2 class="chart-title">Temperature (Last 30 Days)</h2>
+                <div class="chart-wrapper">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="info-section">
+            <h2 class="section-title">Cell Info</h2>
+            <div class="info-grid" id="cellInfoGrid">
+                
+            </div>
+        </div>
+    </main>
+
+    <script src="hist_script.js"></script>
+</body>
+</html>

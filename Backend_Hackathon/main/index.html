@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Health Monitor</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 7h16M4 12h16M4 17h16" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span class="logo-text">Volt Safe 360</span>
+            </div>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5500/main/index.html" class="nav-item">Dashboard</a>
+                <a href="http://127.0.0.1:5500/history/history.html" class="nav-item">Historical Trends</a>
+                <a id="adminNav" class="nav-item">Admin</a>
+                <a id="loginBtn" class="nav-item">Login</a>
+                <a id="logoutBtn" class="nav-item" style="display:none;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            
+            <h1 class="section-title">Real-Time Metrics</h1>
+
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon voltage-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <p class="metric-label">Average Voltage</p>
+                        <h2 class="metric-value" id="avgVoltage">3.85 V</h2>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon temp-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <p class="metric-label">Average Temperature</p>
+                        <h2 class="metric-value" id="avgTemp">28.4 °C</h2>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon cycle-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <p class="metric-label">Charge Cycle Count</p>
+                        <h2 class="metric-value" id="chargeCycles">120</h2>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon anomaly-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="9" x2="12" y2="13" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <p class="metric-label">Anomaly Count Today</p>
+                        <h2 class="metric-value" id="anomalyCount">2</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">Voltage vs Time (Live)</h3>
+                    <div class="chart-container">
+                        <canvas id="voltageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3 class="chart-title">Temperature vs Time (Live)</h3>
+                    <div class="chart-container">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+           
+            <div class="table-card">
+                <h3 class="table-title">Battery Cells</h3>
+                <div class="table-wrapper">
+                    <table class="battery-table">
+                        <thead>
+                            <tr>
+                                <th>Cell ID</th>
+                                <th>Voltage</th>
+                                <th>Temp</th>
+                                <th>Status</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batteryTableBody">
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    
+    <footer class="footer">
+        <div class="footer-container">
+            <p class="footer-text">Contact Customer Support</p>
+            <p class="footer-text">+91 98765 43210</p>
+            <p class="footer-text">ccs@voltasafe360.com</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,599 +1,480 @@
-// ============ ADMIN PAGE PROTECTION ============
-if (!localStorage.getItem('token')) {
-    window.location.href = '../login/login.html';
+// ADMIN PAGE SCRIPT - Fully Patched Version
+
+// Ensure shared.js is loaded before this file.
+// Uses: API_BASE, getAuthToken(), isAdmin(), showNotification()
+
+// ---------------------------------------------
+// AUTH CHECK (Fix #1)
+// ---------------------------------------------
+if (!getAuthToken()) {
+  window.location.href = '../login/login.html';
 }
 
-// Check if user is admin
-const userRole = localStorage.getItem('role');
-if (userRole !== 'admin') {
-    window.location.href = '../main/index.html';
+if (!isAdmin()) {
+  showNotification('Admin access required', 'error');
+  setTimeout(() => (window.location.href = '../main/index.html'), 800);
 }
 
-// ============ LOGIN/LOGOUT MANAGEMENT ============
-function initAuthUI() {
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const adminNav = document.getElementById('adminNav');
-    const token = localStorage.getItem('token');
-
-    if (token) {
-        loginBtn.style.display = 'none';
-        logoutBtn.style.display = 'inline-block';
-    } else {
-        loginBtn.style.display = 'inline-block';
-        logoutBtn.style.display = 'none';
-    }
-
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
-            window.location.href = '../login/login.html';
-        });
-    }
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('role');
-            localStorage.removeItem('user');
-            window.location.href = '../login/login.html';
-        });
-    }
-
-    if (adminNav) {
-        adminNav.style.pointerEvents = 'none';
-        adminNav.style.opacity = '0.6';
-    }
-}
-
-const API = {
-    listCells: "/api/admin/cells",
-    addCell: "/api/admin/cells",
-    deleteCell: "/api/admin/cells/:id",
-    updateCell: "/api/admin/cells/:id",
-    listAnomalies: "/api/admin/anomalies",
-    anomalyDetails: "/api/admin/anomalies/:id",
-    markAnomalyReviewed: "/api/admin/anomalies/:id/review"
-};
-
+// ---------------------------------------------
+// GLOBAL STATE
+// ---------------------------------------------
 let cellsData = [];
 let anomaliesData = [];
 let selectedCells = new Set();
 let currentCellPage = 1;
 let currentAnomalyPage = 1;
-let currentAnomalyId = null;
+let editingCellId = null;
 const itemsPerPage = 10;
 
+// ---------------------------------------------
+// FIX #2 — API Endpoints using API_BASE
+// ---------------------------------------------
+const API = {
+  listCells: `${API_BASE}/admin/cells`,
+  createCell: `${API_BASE}/admin/cells`,
+  updateCell: `${API_BASE}/admin/cells/:id`,
+  deleteCell: `${API_BASE}/admin/cells/:id`,
+  listAnomalies: `${API_BASE}/admin/anomalies`,
+  anomalyDetails: `${API_BASE}/admin/anomalies/:id`,
+  markAnomalyReviewed: `${API_BASE}/admin/anomalies/:id`
+};
+
+// ---------------------------------------------
+// AUTH HEADERS
+// ---------------------------------------------
 function getAuthHeaders() {
-    const token = localStorage.getItem("token");
-    return {
-        "Content-Type": "application/json",
-        "Authorization": token ? `Bearer ${token}` : ""
-    };
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${getAuthToken()}`
+  };
 }
 
-// Wrapper function to handle fetch with JWT and error handling
+// ---------------------------------------------
+// AUTH FETCH (handles 401/403)
+// ---------------------------------------------
 async function authenticatedFetch(url, options = {}) {
-    const headers = getAuthHeaders();
-    const response = await fetch(url, {
-        ...options,
-        headers: { ...options.headers, ...headers }
-    });
-    
-    // Check if token expired (401)
-    if (response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('user');
-        window.location.href = '../login/login.html';
-        throw new Error('Session expired. Please login again.');
-    }
-    
-    return response;
+  const finalOptions = {
+    ...options,
+    headers: { ...(options.headers || {}), ...getAuthHeaders() }
+  };
+
+  const res = await fetch(url, finalOptions);
+
+  if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    showNotification('Session expired. Redirecting...', 'error');
+    setTimeout(() => (window.location.href = '../login/login.html'), 700);
+  }
+
+  return res;
 }
 
-function showToast(message, type = "success") {
-    const toast = document.getElementById("toast");
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
-    toast.classList.add("show");
-    setTimeout(() => {
-        toast.classList.remove("show");
-    }, 3000);
+// ---------------------------------------------
+// TOAST
+// ---------------------------------------------
+function showToast(msg, type = 'success') {
+  if (typeof showNotification === 'function') return showNotification(msg, type);
+
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function openModal(modalId) {
-    document.getElementById(modalId).classList.add("active");
+// ---------------------------------------------
+// FETCH CELLS
+// ---------------------------------------------
+async function fetchData() {
+  try {
+    const res = await authenticatedFetch(API.listCells);
+    const payload = await res.json();
+    cellsData = payload.data || payload;
+
+    renderAdminTable();
+    populateCellFilter();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load cells. Using mock data.', 'error');
+    cellsData = generateMockCells();
+    renderAdminTable();
+    populateCellFilter();
+  }
 }
 
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove("active");
-}
-
-async function fetchCells() {
-    try {
-        const response = await authenticatedFetch(API.listCells);
-        
-        if (!response.ok) throw new Error("Failed to fetch cells");
-        
-        cellsData = await response.json();
-        renderCellsTable();
-        populateCellFilter();
-    } catch (error) {
-        console.error("Error fetching cells:", error);
-        showToast("Failed to load cells", "error");
-        cellsData = generateMockCells();
-        renderCellsTable();
-        populateCellFilter();
-    }
-}
-
+// Mock fallback
 function generateMockCells() {
-    return [
-        { id: 1, status: "Healthy", chargeCycles: 245, avgVoltage: 3.72, avgTemp: 28.5 },
-        { id: 2, status: "Warning", chargeCycles: 487, avgVoltage: 3.64, avgTemp: 32.1 },
-        { id: 3, status: "Healthy", chargeCycles: 156, avgVoltage: 3.75, avgTemp: 27.8 },
-        { id: 4, status: "Critical", chargeCycles: 892, avgVoltage: 3.21, avgTemp: 38.4 },
-        { id: 5, status: "Healthy", chargeCycles: 312, avgVoltage: 3.71, avgTemp: 29.2 }
-    ];
+  return [
+    { _id: '1', cellId: 1, status: 'Healthy', chargeCycles: 245, avgVoltage: 3.72, avgTemperature: 28.5 },
+    { _id: '2', cellId: 2, status: 'Warning', chargeCycles: 487, avgVoltage: 3.64, avgTemperature: 32.1 }
+  ];
 }
 
-function renderCellsTable() {
-    const tbody = document.getElementById("cellsTableBody");
-    const searchTerm = document.getElementById("cellSearchInput").value.toLowerCase();
-    
-    const filteredCells = cellsData.filter(cell => 
-        cell.id.toString().includes(searchTerm) || 
-        cell.status.toLowerCase().includes(searchTerm)
-    );
-    
-    const startIdx = (currentCellPage - 1) * itemsPerPage;
-    const endIdx = startIdx + itemsPerPage;
-    const paginatedCells = filteredCells.slice(startIdx, endIdx);
-    
-    if (paginatedCells.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No cells found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = paginatedCells.map(cell => `
-        <tr>
-            <td><input type="checkbox" class="cell-checkbox" data-cell-id="${cell.id}" ${selectedCells.has(cell.id) ? 'checked' : ''}></td>
-            <td>${cell.id}</td>
-            <td><span class="status-badge status-${cell.status.toLowerCase()}">${cell.status}</span></td>
-            <td>${cell.chargeCycles}</td>
-            <td>${cell.avgVoltage ? cell.avgVoltage.toFixed(2) : 'N/A'}</td>
-            <td>${cell.avgTemp ? cell.avgTemp.toFixed(1) : 'N/A'}</td>
-            <td>
-                <button class="btn btn-secondary action-btn edit-cell-btn" data-cell-id="${cell.id}">Edit</button>
-                <button class="btn btn-danger action-btn delete-cell-btn" data-cell-id="${cell.id}">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    
-    updateCellPagination(filteredCells.length);
-    attachCellEventListeners();
+// ---------------------------------------------
+// RENDER CELLS TABLE
+// ---------------------------------------------
+function renderAdminTable() {
+  const tbody = document.getElementById('cellsTableBody');
+  const search = document.getElementById('cellSearchInput').value.toLowerCase();
+
+  const filtered = cellsData.filter(
+    c =>
+      c.cellId.toString().includes(search) ||
+      c.status.toLowerCase().includes(search)
+  );
+
+  const start = (currentCellPage - 1) * itemsPerPage;
+  const pageItems = filtered.slice(start, start + itemsPerPage);
+
+  if (pageItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="loading">No cells found</td></tr>`;
+    updateCellPagination(filtered.length);
+    return;
+  }
+
+  tbody.innerHTML = pageItems
+    .map(
+      cell => `
+      <tr>
+        <td><input type="checkbox" class="cell-checkbox" data-cell-id="${cell._id}" ${selectedCells.has(cell._id) ? 'checked' : ''}></td>
+        <td>${cell.cellId}</td>
+        <td><span class="status-badge status-${cell.status.toLowerCase()}">${cell.status}</span></td>
+        <td>${cell.chargeCycles}</td>
+        <td>${Number(cell.avgVoltage).toFixed(2)}</td>
+        <td>${Number(cell.avgTemperature).toFixed(1)}</td>
+        <td>
+          <button class="btn btn-secondary edit-cell-btn" data-cell-id="${cell._id}">✎ Edit</button>
+          <button class="btn btn-danger delete-cell-btn" data-cell-id="${cell._id}">✕ Delete</button>
+        </td>
+      </tr>`
+    )
+    .join('');
+
+  updateCellPagination(filtered.length);
+  attachCellEventListeners();
 }
 
-function updateCellPagination(totalItems) {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    document.getElementById("cellsPageInfo").textContent = `Page ${currentCellPage} of ${totalPages}`;
-    document.getElementById("prevCellsPage").disabled = currentCellPage === 1;
-    document.getElementById("nextCellsPage").disabled = currentCellPage === totalPages || totalPages === 0;
+// ---------------------------------------------
+// PAGINATION
+// ---------------------------------------------
+function updateCellPagination(total) {
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+
+  document.getElementById('cellsPageInfo').textContent = `Page ${currentCellPage} of ${totalPages}`;
+  document.getElementById('prevCellsPage').disabled = currentCellPage === 1;
+  document.getElementById('nextCellsPage').disabled = currentCellPage === totalPages;
 }
 
+// ---------------------------------------------
+// EVENT LISTENERS FOR EACH CELL
+// ---------------------------------------------
 function attachCellEventListeners() {
-    document.querySelectorAll(".cell-checkbox").forEach(checkbox => {
-        checkbox.addEventListener("change", (e) => {
-            const cellId = parseInt(e.target.dataset.cellId);
-            if (e.target.checked) {
-                selectedCells.add(cellId);
-            } else {
-                selectedCells.delete(cellId);
-            }
-            updateDeleteSelectedButton();
-        });
+  document.querySelectorAll('.cell-checkbox').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const id = e.target.dataset.cellId;
+      if (e.target.checked) selectedCells.add(id);
+      else selectedCells.delete(id);
+      updateDeleteSelectedButton();
     });
-    
-    document.querySelectorAll(".delete-cell-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const cellId = parseInt(e.target.dataset.cellId);
-            deleteCell(cellId);
-        });
-    });
-    
-    document.querySelectorAll(".edit-cell-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const cellId = parseInt(e.target.dataset.cellId);
-            showToast("Edit functionality coming soon", "success");
-        });
-    });
+  });
+
+  document.querySelectorAll('.edit-cell-btn').forEach(btn => {
+    btn.addEventListener('click', e => openEditModal(e.target.dataset.cellId));
+  });
+
+  document.querySelectorAll('.delete-cell-btn').forEach(btn => {
+    btn.addEventListener('click', e => handleDelete(e.target.dataset.cellId));
+  });
 }
 
+// ---------------------------------------------
+// DELETE SELECTED ENABLE
+// ---------------------------------------------
 function updateDeleteSelectedButton() {
-    const btn = document.getElementById("deleteSelectedBtn");
-    btn.disabled = selectedCells.size === 0;
+  document.getElementById('deleteSelectedBtn').disabled = selectedCells.size === 0;
 }
 
-async function addCell(cellData) {
-    try {
-        const response = await authenticatedFetch(API.addCell, {
-            method: "POST",
-            body: JSON.stringify(cellData)
-        });
-        
-        if (!response.ok) throw new Error("Failed to add cell");
-        
-        const newCell = await response.json();
-        cellsData.push(newCell);
-        renderCellsTable();
-        showToast("Cell added successfully");
-        closeModal("addCellModal");
-    } catch (error) {
-        console.error("Error adding cell:", error);
-        showToast("Failed to add cell", "error");
-        const mockCell = {
-            id: cellData.cellId,
-            status: cellData.status,
-            chargeCycles: cellData.chargeCycles,
-            avgVoltage: 3.70,
-            avgTemp: 28.0
-        };
-        cellsData.push(mockCell);
-        renderCellsTable();
-        closeModal("addCellModal");
-        showToast("Cell added (mock data)", "success");
-    }
+// ---------------------------------------------
+// CREATE CELL
+// ---------------------------------------------
+async function handleCreate(data) {
+  try {
+    const res = await authenticatedFetch(API.createCell, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+
+    const payload = await res.json();
+    const created = payload.data;
+
+    cellsData.unshift(created);
+    showToast('Cell created');
+    closeModal('addCellModal');
+    fetchData();
+  } catch (err) {
+    showToast('Create failed', 'error');
+  }
 }
 
-async function deleteCell(cellId) {
-    if (!confirm(`Are you sure you want to delete cell ${cellId}?`)) return;
-    
-    try {
-        const url = API.deleteCell.replace(":id", cellId);
-        const response = await authenticatedFetch(url, {
-            method: "DELETE"
-        });
-        
-        if (!response.ok) throw new Error("Failed to delete cell");
-        
-        cellsData = cellsData.filter(cell => cell.id !== cellId);
-        selectedCells.delete(cellId);
-        renderCellsTable();
-        updateDeleteSelectedButton();
-        showToast("Cell deleted successfully", "success");
-    } catch (error) {
-        console.error("Error deleting cell:", error);
-        cellsData = cellsData.filter(cell => cell.id !== cellId);
-        selectedCells.delete(cellId);
-        renderCellsTable();
-        updateDeleteSelectedButton();
-        showToast("Cell deleted (mock)", "success");
-    }
+// ---------------------------------------------
+// UPDATE CELL
+// ---------------------------------------------
+async function handleUpdate(cellId, data) {
+  try {
+    const res = await authenticatedFetch(API.updateCell.replace(':id', cellId), {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+
+    const payload = await res.json();
+    const updated = payload.data;
+
+    const index = cellsData.findIndex(c => c._id === cellId);
+    if (index !== -1) cellsData[index] = updated;
+
+    showToast('Cell updated');
+    closeModal('editCellModal');
+    fetchData();
+  } catch (err) {
+    showToast('Update failed', 'error');
+  }
 }
 
+// ---------------------------------------------
+// DELETE SINGLE CELL
+// ---------------------------------------------
+async function handleDelete(cellId) {
+  if (!confirm('Delete this cell?')) return;
+
+  try {
+    await authenticatedFetch(API.deleteCell.replace(':id', cellId), {
+      method: 'DELETE'
+    });
+
+    cellsData = cellsData.filter(c => c._id !== cellId);
+    showToast('Cell deleted');
+    renderAdminTable();
+  } catch (err) {
+    showToast('Delete failed', 'error');
+  }
+}
+
+// ---------------------------------------------
+// DELETE MULTIPLE CELLS
+// ---------------------------------------------
 async function deleteSelectedCells() {
-    if (selectedCells.size === 0) return;
-    if (!confirm(`Delete ${selectedCells.size} selected cell(s)?`)) return;
-    
-    const deletePromises = Array.from(selectedCells).map(cellId => {
-        const url = API.deleteCell.replace(":id", cellId);
-        return authenticatedFetch(url, {
-            method: "DELETE"
-        }).catch(err => console.error(`Failed to delete cell ${cellId}:`, err));
-    });
-    
-    try {
-        await Promise.all(deletePromises);
-        cellsData = cellsData.filter(cell => !selectedCells.has(cell.id));
-        selectedCells.clear();
-        renderCellsTable();
-        updateDeleteSelectedButton();
-        showToast("Selected cells deleted", "success");
-    } catch (error) {
-        console.error("Error deleting cells:", error);
-        cellsData = cellsData.filter(cell => !selectedCells.has(cell.id));
-        selectedCells.clear();
-        renderCellsTable();
-        updateDeleteSelectedButton();
-        showToast("Selected cells deleted (partial)", "success");
-    }
+  if (!confirm('Delete selected cells?')) return;
+
+  try {
+    const ids = [...selectedCells];
+    await Promise.all(
+      ids.map(id =>
+        authenticatedFetch(API.deleteCell.replace(':id', id), {
+          method: 'DELETE'
+        })
+      )
+    );
+
+    cellsData = cellsData.filter(c => !selectedCells.has(c._id));
+    selectedCells.clear();
+    renderAdminTable();
+    showToast('Deleted selected cells');
+  } catch (err) {
+    showToast('Delete failed', 'error');
+  }
 }
 
+// ---------------------------------------------
+// EDIT MODAL
+// ---------------------------------------------
+function openEditModal(cellId) {
+  editingCellId = cellId;
+  const cell = cellsData.find(c => c._id === cellId);
+
+  document.getElementById('editCellIdInput').value = cell.cellId;
+  document.getElementById('editStatusInput').value = cell.status;
+  document.getElementById('editChargeCyclesInput').value = cell.chargeCycles;
+  document.getElementById('editAvgVoltageInput').value = cell.avgVoltage;
+  document.getElementById('editAvgTempInput').value = cell.avgTemperature;
+
+  openModal('editCellModal');
+}
+
+// ---------------------------------------------
+// BROADCAST
+// ---------------------------------------------
+function broadcastDataUpdate() {
+  localStorage.setItem('dataUpdateTimestamp', Date.now());
+}
+
+// ---------------------------------------------
+// FETCH ANOMALIES (Fix #4)
+// ---------------------------------------------
 async function fetchAnomalies(filters = {}) {
-    try {
-        const params = new URLSearchParams();
-        if (filters.startDate) params.append("startDate", filters.startDate);
-        if (filters.endDate) params.append("endDate", filters.endDate);
-        if (filters.severity) params.append("severity", filters.severity);
-        if (filters.cellId) params.append("cellId", filters.cellId);
-        
-        const url = `${API.listAnomalies}?${params.toString()}`;
-        const response = await authenticatedFetch(url);
-        
-        if (!response.ok) throw new Error("Failed to fetch anomalies");
-        
-        anomaliesData = await response.json();
-        renderAnomaliesTable();
-    } catch (error) {
-        console.error("Error fetching anomalies:", error);
-        showToast("Failed to load anomalies", "error");
-        anomaliesData = generateMockAnomalies();
-        renderAnomaliesTable();
-    }
-}
+  try {
+    const params = new URLSearchParams(filters);
 
-function generateMockAnomalies() {
-    return [
-        { id: 1, timestamp: "2024-04-03T15:24:00", cellId: 2, severity: "medium", description: "Cell voltage out of range" },
-        { id: 2, timestamp: "2024-04-03T12:08:00", cellId: 2, severity: "high", description: "Cell temperature out of range" },
-        { id: 3, timestamp: "2024-04-03T09:42:00", cellId: 3, severity: "low", description: "Minor voltage fluctuation detected" },
-        { id: 4, timestamp: "2024-04-02T18:15:00", cellId: 4, severity: "critical", description: "Critical temperature spike" },
-        { id: 5, timestamp: "2024-04-02T14:30:00", cellId: 1, severity: "low", description: "Charge cycle anomaly" }
-    ];
-}
+    const res = await authenticatedFetch(`${API.listAnomalies}?${params}`);
+    const payload = await res.json();
 
-function renderAnomaliesTable() {
-    const tbody = document.getElementById("anomaliesTableBody");
-    
-    const startIdx = (currentAnomalyPage - 1) * itemsPerPage;
-    const endIdx = startIdx + itemsPerPage;
-    const paginatedAnomalies = anomaliesData.slice(startIdx, endIdx);
-    
-    if (paginatedAnomalies.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No anomalies found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = paginatedAnomalies.map(anomaly => {
-        const date = new Date(anomaly.timestamp);
-        const formattedDate = date.toLocaleString();
-        return `
-            <tr>
-                <td>${formattedDate}</td>
-                <td>${anomaly.cellId}</td>
-                <td><span class="status-badge severity-${anomaly.severity}">${anomaly.severity}</span></td>
-                <td>${anomaly.description}</td>
-                <td>
-                    <button class="btn btn-primary action-btn view-anomaly-btn" data-anomaly-id="${anomaly.id}">View</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    updateAnomalyPagination(anomaliesData.length);
-    attachAnomalyEventListeners();
-}
+    // Fix: extract anomalies array
+    anomaliesData =
+      payload.data?.anomalies ||
+      payload.data ||
+      [];
 
-function updateAnomalyPagination(totalItems) {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    document.getElementById("anomaliesPageInfo").textContent = `Page ${currentAnomalyPage} of ${totalPages}`;
-    document.getElementById("prevAnomaliesPage").disabled = currentAnomalyPage === 1;
-    document.getElementById("nextAnomaliesPage").disabled = currentAnomalyPage === totalPages || totalPages === 0;
-}
-
-function attachAnomalyEventListeners() {
-    document.querySelectorAll(".view-anomaly-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const anomalyId = parseInt(e.target.dataset.anomalyId);
-            viewAnomalyDetails(anomalyId);
-        });
-    });
-}
-
-async function viewAnomalyDetails(anomalyId) {
-    currentAnomalyId = anomalyId;
-    try {
-        const url = API.anomalyDetails.replace(":id", anomalyId);
-        const response = await authenticatedFetch(url);
-        
-        if (!response.ok) throw new Error("Failed to fetch anomaly details");
-        
-        const anomaly = await response.json();
-        displayAnomalyDetails(anomaly);
-    } catch (error) {
-        console.error("Error fetching anomaly details:", error);
-        const anomaly = anomaliesData.find(a => a.id === anomalyId);
-        if (anomaly) {
-            const mockDetails = {
-                ...anomaly,
-                telemetry: {
-                    voltage: 3.45,
-                    temperature: 35.2,
-                    chargeCycles: 487,
-                    current: 2.1,
-                    resistance: 0.012
-                }
-            };
-            displayAnomalyDetails(mockDetails);
-        }
-    }
-}
-
-function displayAnomalyDetails(anomaly) {
-    const date = new Date(anomaly.timestamp);
-    document.getElementById("detailTimestamp").textContent = date.toLocaleString();
-    document.getElementById("detailCellId").textContent = anomaly.cellId;
-    document.getElementById("detailSeverity").innerHTML = `<span class="status-badge severity-${anomaly.severity}">${anomaly.severity}</span>`;
-    document.getElementById("detailDescription").textContent = anomaly.description;
-    
-    const telemetryContainer = document.getElementById("telemetrySnapshot");
-    if (anomaly.telemetry) {
-        telemetryContainer.innerHTML = Object.entries(anomaly.telemetry).map(([key, value]) => `
-            <div class="telemetry-item">
-                <span class="telemetry-label">${key.charAt(0).toUpperCase() + key.slice(1)}</span>
-                <span class="telemetry-value">${typeof value === 'number' ? value.toFixed(2) : value}</span>
-            </div>
-        `).join('');
-    } else {
-        telemetryContainer.innerHTML = '<p class="loading">No telemetry data available</p>';
-    }
-    
-    openModal("anomalyDetailModal");
-}
-
-async function markAnomalyAsReviewed() {
-    if (!currentAnomalyId) return;
-    
-    try {
-        const url = API.markAnomalyReviewed.replace(":id", currentAnomalyId);
-        const response = await authenticatedFetch(url, {
-            method: "POST",
-            body: JSON.stringify({ reviewed: true })
-        });
-        
-        if (!response.ok) throw new Error("Failed to mark anomaly as reviewed");
-        
-        showToast("Anomaly marked as reviewed", "success");
-        closeModal("anomalyDetailModal");
-    } catch (error) {
-        console.error("Error marking anomaly:", error);
-        showToast("Anomaly marked as reviewed (mock)", "success");
-        closeModal("anomalyDetailModal");
-    }
-}
-
-function populateCellFilter() {
-    const cellFilter = document.getElementById("cellFilter");
-    const uniqueCellIds = [...new Set(cellsData.map(cell => cell.id))].sort((a, b) => a - b);
-    
-    cellFilter.innerHTML = '<option value="">All</option>' + 
-        uniqueCellIds.map(id => `<option value="${id}">${id}</option>`).join('');
-}
-
-function exportToCSV() {
-    const headers = ["Date", "Cell ID", "Severity", "Description"];
-    const rows = anomaliesData.map(anomaly => [
-        new Date(anomaly.timestamp).toLocaleString(),
-        anomaly.cellId,
-        anomaly.severity,
-        anomaly.description
-    ]);
-    
-    const csvContent = [
-        headers.join(","),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
-    
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `anomalies_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    showToast("CSV exported successfully", "success");
-}
-
-document.getElementById("addCellBtn").addEventListener("click", () => {
-    openModal("addCellModal");
-});
-
-document.getElementById("closeAddCellModal").addEventListener("click", () => {
-    closeModal("addCellModal");
-});
-
-document.getElementById("cancelAddCellBtn").addEventListener("click", () => {
-    closeModal("addCellModal");
-});
-
-document.getElementById("addCellForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const cellData = {
-        cellId: parseInt(document.getElementById("cellIdInput").value),
-        status: document.getElementById("statusInput").value,
-        chargeCycles: parseInt(document.getElementById("chargeCyclesInput").value)
-    };
-    addCell(cellData);
-    e.target.reset();
-});
-
-document.getElementById("deleteSelectedBtn").addEventListener("click", () => {
-    deleteSelectedCells();
-});
-
-document.getElementById("selectAllCells").addEventListener("change", (e) => {
-    const checkboxes = document.querySelectorAll(".cell-checkbox");
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = e.target.checked;
-        const cellId = parseInt(checkbox.dataset.cellId);
-        if (e.target.checked) {
-            selectedCells.add(cellId);
-        } else {
-            selectedCells.delete(cellId);
-        }
-    });
-    updateDeleteSelectedButton();
-});
-
-document.getElementById("cellSearchInput").addEventListener("input", () => {
-    currentCellPage = 1;
-    renderCellsTable();
-});
-
-document.getElementById("prevCellsPage").addEventListener("click", () => {
-    if (currentCellPage > 1) {
-        currentCellPage--;
-        renderCellsTable();
-    }
-});
-
-document.getElementById("nextCellsPage").addEventListener("click", () => {
-    currentCellPage++;
-    renderCellsTable();
-});
-
-document.getElementById("prevAnomaliesPage").addEventListener("click", () => {
-    if (currentAnomalyPage > 1) {
-        currentAnomalyPage--;
-        renderAnomaliesTable();
-    }
-});
-
-document.getElementById("nextAnomaliesPage").addEventListener("click", () => {
-    currentAnomalyPage++;
     renderAnomaliesTable();
-});
+  } catch (err) {
+    showToast('Failed to load anomalies', 'error');
+    anomaliesData = generateMockAnomalies();
+    renderAnomaliesTable();
+  }
+}
 
-document.getElementById("applyFiltersBtn").addEventListener("click", () => {
-    const filters = {
-        startDate: document.getElementById("startDateFilter").value,
-        endDate: document.getElementById("endDateFilter").value,
-        severity: document.getElementById("severityFilter").value,
-        cellId: document.getElementById("cellFilter").value
-    };
-    currentAnomalyPage = 1;
-    fetchAnomalies(filters);
-});
-
-document.getElementById("exportCsvBtn").addEventListener("click", () => {
-    exportToCSV();
-});
-
-document.getElementById("closeAnomalyDetailModal").addEventListener("click", () => {
-    closeModal("anomalyDetailModal");
-});
-
-document.getElementById("closeDetailBtn").addEventListener("click", () => {
-    closeModal("anomalyDetailModal");
-});
-
-document.getElementById("markReviewedBtn").addEventListener("click", () => {
-    markAnomalyAsReviewed();
-});
-
-document.getElementById("logoutBtn").addEventListener("click", () => {
-    if (confirm("Are you sure you want to logout?")) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+// Mock anomalies
+function generateMockAnomalies() {
+  return [
+    {
+      _id: '1',
+      timestamp: '2024-04-03T15:24:00Z',
+      cellId: 3,
+      severity: 'high',
+      description: 'Voltage spike'
     }
+  ];
+}
+
+// ---------------------------------------------
+// RENDER ANOMALIES TABLE
+// ---------------------------------------------
+function renderAnomaliesTable() {
+  const tbody = document.getElementById('anomaliesTableBody');
+
+  const start = (currentAnomalyPage - 1) * itemsPerPage;
+  const pageItems = anomaliesData.slice(start, start + itemsPerPage);
+
+  if (!pageItems.length) {
+    tbody.innerHTML = `<tr><td colspan="5">No anomalies found</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = pageItems
+    .map(a => {
+      const date = new Date(a.timestamp);
+      return `
+        <tr>
+          <td>${date.toLocaleString()}</td>
+          <td>${a.cellId}</td>
+          <td><span class="status-badge severity-${a.severity}">${a.severity}</span></td>
+          <td>${a.description}</td>
+          <td><button class="btn btn-primary view-anomaly-btn" data-anomaly-id="${a._id}">View</button></td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  attachAnomalyEventListeners();
+}
+
+// ---------------------------------------------
+// VIEW ANOMALY DETAIL (Fix #4)
+// ---------------------------------------------
+async function viewAnomalyDetails(id) {
+  try {
+    const res = await authenticatedFetch(API.anomalyDetails.replace(':id', id));
+    const payload = await res.json();
+
+    const anomaly = payload.data || payload;
+
+    displayAnomalyDetails(anomaly);
+  } catch (err) {
+    showToast('Unable to load anomaly details', 'error');
+  }
+}
+
+function displayAnomalyDetails(a) {
+  document.getElementById('detailTimestamp').textContent = new Date(a.timestamp).toLocaleString();
+  document.getElementById('detailCellId').textContent = a.cellId;
+  document.getElementById('detailSeverity').innerHTML = `<span class="status-badge severity-${a.severity}">${a.severity}</span>`;
+  document.getElementById('detailDescription').textContent = a.description;
+
+  openModal('anomalyDetailModal');
+}
+
+// ---------------------------------------------
+// EXPORT CSV
+// ---------------------------------------------
+function exportToCSV() {
+  const csv = [
+    ['Cell ID', 'Status', 'Cycles', 'Voltage', 'Temperature'],
+    ...cellsData.map(c => [
+      c.cellId,
+      c.status,
+      c.chargeCycles,
+      c.avgVoltage,
+      c.avgTemperature
+    ])
+  ]
+    .map(row => row.join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cells.csv';
+  a.click();
+}
+
+// ---------------------------------------------
+// FILTERS HANDLERS
+// ---------------------------------------------
+document.getElementById('applyFiltersBtn').addEventListener('click', () => {
+  const filters = {
+    startDate: document.getElementById('startDateFilter').value,
+    endDate: document.getElementById('endDateFilter').value,
+    severity: document.getElementById('severityFilter').value,
+    cellId: document.getElementById('cellFilter').value
+  };
+  fetchAnomalies(filters);
 });
 
-window.addEventListener("click", (e) => {
-    if (e.target.classList.contains("modal")) {
-        e.target.classList.remove("active");
-    }
+// ---------------------------------------------
+// DELETE SELECTED CELLS
+// ---------------------------------------------
+document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelectedCells);
+
+// ---------------------------------------------
+// SEARCH
+// ---------------------------------------------
+document
+  .getElementById('cellSearchInput')
+  .addEventListener('input', () => renderAdminTable());
+
+// ---------------------------------------------
+// PAGINATION
+// ---------------------------------------------
+document.getElementById('prevCellsPage').addEventListener('click', () => {
+  if (currentCellPage > 1) currentCellPage--;
+  renderAdminTable();
 });
 
-initAuthUI();
-fetchCells();
+document.getElementById('nextCellsPage').addEventListener('click', () => {
+  currentCellPage++;
+  renderAdminTable();
+});
+
+// ---------------------------------------------
+// LOGOUT
+// ---------------------------------------------
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+  window.location.href = '../login/login.html';
+});
+
+// ---------------------------------------------
+// INITIAL LOAD
+// ---------------------------------------------
+fetchData();
 fetchAnomalies();

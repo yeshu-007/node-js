@@ -1,13 +1,3 @@
-// FRONTEND AUTHENTICATION GUIDE
-// ======================================================
-// This guide shows how to use the backend auth endpoints
-// from your JavaScript files (script.js, hist_script.js, admin.js)
-// ======================================================
-
-// ============================================
-// 1. REGISTER NEW USER
-// ============================================
-// Call this when user submits registration form
 
 async function registerUser(username, email, password) {
   try {
@@ -42,14 +32,9 @@ async function registerUser(username, email, password) {
   }
 }
 
-// ============================================
-// 2. LOGIN USER
-// ============================================
-// Call this when user submits login form
 
 async function loginUser(usernameOrEmail, password) {
   try {
-    // Determine if input is email or username
     const isEmail = usernameOrEmail.includes('@');
     const loginData = isEmail
       ? { email: usernameOrEmail, password }
@@ -66,7 +51,6 @@ async function loginUser(usernameOrEmail, password) {
     const data = await response.json();
 
     if (data.success) {
-      // Store token in localStorage
       localStorage.setItem('authToken', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
       console.log('✓ Login successful:', data.data.user);

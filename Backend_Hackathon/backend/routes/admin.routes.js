@@ -7,6 +7,7 @@ const validateMiddleware = require('../middleware/validate');
 const {
   getAllCells,
   addCell,
+  updateCell,
   deleteCell,
   getAllAnomalies,
   getAnomalyById,
@@ -16,7 +17,23 @@ const {
 // GET /api/admin/cells - Get all cells (admin only)
 router.get('/cells', authMiddleware, adminOnly, getAllCells);
 
-// POST /api/admin/cells - Add new cell (admin only)
+// POST /api/admin/create - Create new cell (admin only)
+router.post(
+  '/create',
+  authMiddleware,
+  adminOnly,
+  [
+    body('cellId').isInt().toInt(),
+    body('status').optional().isIn(['Healthy', 'Warning', 'Critical']),
+    body('chargeCycles').optional().isInt().toInt(),
+    body('avgVoltage').optional().isFloat(),
+    body('avgTemperature').optional().isFloat(),
+  ],
+  validateMiddleware,
+  addCell
+);
+
+// POST /api/admin/cells - Create new cell (legacy endpoint - admin only)
 router.post(
   '/cells',
   authMiddleware,
@@ -30,7 +47,34 @@ router.post(
   addCell
 );
 
-// DELETE /api/admin/cells/:id - Delete cell (admin only)
+// PUT /api/admin/update/:id - Update cell by ID (admin only)
+router.put(
+  '/update/:id',
+  authMiddleware,
+  adminOnly,
+  [
+    param('id').isMongoId(),
+    body('cellId').optional().isInt(),
+    body('status').optional().isIn(['Healthy', 'Warning', 'Critical']),
+    body('chargeCycles').optional().isInt(),
+    body('avgVoltage').optional().isFloat(),
+    body('avgTemperature').optional().isFloat(),
+  ],
+  validateMiddleware,
+  updateCell
+);
+
+// DELETE /api/admin/delete/:id - Delete cell by ID (admin only)
+router.delete(
+  '/delete/:id',
+  authMiddleware,
+  adminOnly,
+  [param('id').isMongoId()],
+  validateMiddleware,
+  deleteCell
+);
+
+// DELETE /api/admin/cells/:id - Delete cell (legacy endpoint - admin only)
 router.delete(
   '/cells/:id',
   authMiddleware,

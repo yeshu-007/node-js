@@ -344,6 +344,55 @@ body::before {
     animation: pulse-critical 2s ease-in-out infinite;
 }
 
+/* ===== CELL DROPDOWN STYLING ===== */
+.cell-selector {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cell-selector label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+#cellSelector {
+    appearance: none;
+    background: rgba(17, 25, 40, 0.6);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.55rem 2.5rem 0.55rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 150px;
+    transition: 0.3s ease;
+    backdrop-filter: blur(10px);
+    outline: none;
+}
+
+#cellSelector:hover {
+    border-color: var(--accent-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+#cellSelector:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+/* Add dropdown arrow */
+#cellSelector {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%2306b6d4' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 18px;
+}
+
+
 @keyframes pulse-critical {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }

@@ -93,13 +93,53 @@ let updateInterval = null;
 let authToken = localStorage.getItem('authToken') || null;
 
 // ============ BATTERY DATA ============
-const batteryData = [
+let batteryData = [
     { cellId: 1, voltage: 3.87, temp: 27.9, status: 'healthy', lastUpdated: '2 minutes ago' },
     { cellId: 2, voltage: 3.74, temp: 34.2, status: 'warning', lastUpdated: '5 minutes ago' },
     { cellId: 3, voltage: 3.58, temp: 31.8, status: 'critical', lastUpdated: '10 minutes ago' },
     { cellId: 4, voltage: 3.90, temp: 26.7, status: 'healthy', lastUpdated: '3 minutes ago' },
     { cellId: 5, voltage: 3.68, temp: 25.9, status: 'healthy', lastUpdated: '7 minutes ago' }
 ];
+
+// ============ FETCH DASHBOARD DATA FROM BACKEND ============
+async function fetchDashboardData() {
+    try {
+        const response = await authenticatedFetch('/api/admin/cells');
+        if (!response.ok) throw new Error('Failed to fetch cells');
+        
+        const data = await response.json();
+        const cells = Array.isArray(data) ? data : (data.data || []);
+        
+        // Map backend cell data to dashboard format
+        batteryData = cells.map(cell => ({
+            cellId: cell.cellId,
+            voltage: cell.avgVoltage || 3.85,
+            temp: cell.avgTemperature || 28.4,
+            status: cell.status.toLowerCase(),
+            lastUpdated: 'just now'
+        }));
+        
+        renderDashboard();
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        // Keep existing data on error
+    }
+}
+
+// ============ RENDER DASHBOARD ============
+function renderDashboard() {
+    populateBatteryTable();
+    updateChartData();
+}
+
+// ============ SYNC WITH ADMIN CHANGES ============
+let lastDataUpdateTimestamp = localStorage.getItem('dataUpdateTimestamp');
+window.addEventListener('storage', (e) => {
+    if (e.key === 'dataUpdateTimestamp' && e.newValue !== lastDataUpdateTimestamp) {
+        lastDataUpdateTimestamp = e.newValue;
+        fetchDashboardData();
+    }
+});
 
 // ============ CHART CONFIGURATION ============
 const chartConfig = {
@@ -267,6 +307,37 @@ function generateChartData(points) {
 }
 
 // ============ UPDATE CHARTS ============
+// ============ UPDATE CHART DATA WITH BATTERY INFO ============
+function updateChartData() {
+    if (batteryData.length === 0) return;
+    
+    // Use average values from all cells for the chart
+    const avgVoltage = batteryData.reduce((sum, cell) => sum + cell.voltage, 0) / batteryData.length;
+    const avgTemp = batteryData.reduce((sum, cell) => sum + cell.temp, 0) / batteryData.length;
+    
+    const now = new Date();
+    const timeLabel = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    // Update voltage chart
+    voltageChart.data.labels.push(timeLabel);
+    voltageChart.data.datasets[0].data.push(avgVoltage);
+    
+    // Update temperature chart
+    temperatureChart.data.labels.push(timeLabel);
+    temperatureChart.data.datasets[0].data.push(avgTemp);
+
+    // Keep only last 20 data points
+    if (voltageChart.data.labels.length > 20) {
+        voltageChart.data.labels.shift();
+        voltageChart.data.datasets[0].data.shift();
+        temperatureChart.data.labels.shift();
+        temperatureChart.data.datasets[0].data.shift();
+    }
+
+    voltageChart.update('none');
+    temperatureChart.update('none');
+}
+
 function updateCharts() {
     const now = new Date();
     const timeLabel = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });

@@ -2,6 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 const loggerMiddleware = require('./middleware/logger');
 const seedDatabase = require('./utils/seedDatabase');
@@ -29,6 +30,27 @@ app.use(cors({
   credentials: true,
 }));
 app.use(loggerMiddleware);
+
+// Serve frontend static files
+const frontendPath = path.join(__dirname, '..');
+app.use(express.static(frontendPath));
+
+// Serve main dashboard at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'main/index.html'));
+});
+
+// Fallback - serve index.html for any non-API routes
+app.use((req, res, next) => {
+  // If not an API route and not a static file, serve index.html
+  if (!req.path.startsWith('/api/')) {
+    const ext = path.extname(req.path);
+    if (!ext || ext === '.html') {
+      return res.sendFile(path.join(frontendPath, 'main/index.html'));
+    }
+  }
+  next();
+});
 
 // Routes
 // Authentication endpoints

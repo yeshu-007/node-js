@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Travel Diary — Add Trip</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand"><span class="logo">TD</span>Travel Diary</div>
+      <div class="nav-links">
+        <a href="index.html">View Trips</a>
+        <a href="#" onclick="doLogout();">Logout</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Add Trip</h2>
+      <form onsubmit="addTripSubmit(event)" id="addTripForm" novalidate>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="t-title">Title *</label>
+            <input id="t-title" type="text" required />
+          </div>
+          <div class="form-row">
+            <label for="t-category">Category</label>
+            <select id="t-category">
+              <option>Leisure</option>
+              <option>Family</option>
+              <option>Spiritual</option>
+              <option>Business</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="t-depart">Depart Date *</label>
+            <input id="t-depart" type="date" required />
+          </div>
+          <div class="form-row">
+            <label for="t-arrival">Arrival Date *</label>
+            <input id="t-arrival" type="date" required />
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="t-places">Places Visited (comma separated)</label>
+            <input id="t-places" type="text" placeholder="Place1, Place2"/>
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="t-photos">Photos (URLs, comma separated)</label>
+            <input id="t-photos" type="text" placeholder="https://... , https://..." />
+            <div style="margin-top:8px">
+              <label class="small">Or upload from your computer:</label>
+              <input id="t-photos-files" type="file" accept="image/*" multiple />
+            </div>
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="t-about">About</label>
+            <textarea id="t-about"></textarea>
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="t-tips">Tips</label>
+            <textarea id="t-tips"></textarea>
+          </div>
+
+          <div class="form-row">
+            <label for="t-budget">Budget (number)</label>
+            <input id="t-budget" type="number" min="0" />
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn" type="submit">Add Trip</button>
+          <a href="index.html" class="btn ghost" style="text-decoration:none; margin-left:8px;">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

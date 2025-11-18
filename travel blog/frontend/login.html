@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Travel Diary — Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand"><span class="logo">TD</span>Travel Diary</div>
+      <div class="nav-links">
+        <a href="index.html">View Trips</a>
+        <a href="register.html" class="button">Register</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Login</h2>
+      <form onsubmit="loginSubmit(event)" id="loginForm" novalidate>
+        <div class="form-row">
+          <label for="l-email">Email *</label>
+          <input id="l-email" type="text" required />
+        </div>
+        <div class="form-row">
+          <label for="l-password">Password *</label>
+          <input id="l-password" type="password" required />
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn" type="submit">Login</button>
+          <a href="register.html" class="btn ghost" style="text-decoration:none; margin-left:8px;">Create account</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

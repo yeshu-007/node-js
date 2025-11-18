@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Travel Diary — Trips</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body onload="initPage()">
+  <div class="container">
+    <div class="header">
+      <div class="brand"><span class="logo">TD</span>Travel Diary</div>
+      <div class="nav-links">
+        <a href="addtrip.html" class="button">Add Trip</a>
+        <a href="#" id="btnAllTrips" class="button" onclick="showAllTrips(event)">All Trips</a>
+        <a href="#" id="btnMyTrips" class="button" onclick="showMyTrips(event)">My Trips</a>
+        <a href="login.html">Login</a>
+        <a href="#" onclick="doLogout()">Logout</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Trips</h2>
+
+      <div id="tripsArea" class="trips-grid" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Trip</h2>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <form onsubmit="submitEditTrip(event)" id="editTripForm" novalidate>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="e-title">Title *</label>
+            <input id="e-title" type="text" required />
+          </div>
+          <div class="form-row">
+            <label for="e-category">Category</label>
+            <select id="e-category">
+              <option>Leisure</option>
+              <option>Family</option>
+              <option>Spiritual</option>
+              <option>Business</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="e-depart">Depart Date *</label>
+            <input id="e-depart" type="date" required />
+          </div>
+          <div class="form-row">
+            <label for="e-arrival">Arrival Date *</label>
+            <input id="e-arrival" type="date" required />
+          </div>
+
+          <div class="form-row">
+            <label for="e-budget">Budget (number)</label>
+            <input id="e-budget" type="number" min="0" />
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="e-places">Places Visited (comma separated)</label>
+            <input id="e-places" type="text" placeholder="Place1, Place2"/>
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="e-about">About</label>
+            <textarea id="e-about"></textarea>
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="e-tips">Tips</label>
+            <textarea id="e-tips"></textarea>
+          </div>
+
+          <div class="form-row" style="grid-column:1 / -1">
+            <label for="e-photos">Photos (URLs, comma separated)</label>
+            <input id="e-photos" type="text" placeholder="https://... , https://..." />
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn" type="submit">Save Changes</button>
+          <button class="btn ghost" type="button" onclick="closeEditModal()" style="margin-left:8px;">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

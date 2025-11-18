@@ -43,6 +43,46 @@ const addCell = async (req, res) => {
   }
 };
 
+// Update cell
+const updateCell = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cellId, status, chargeCycles, avgVoltage, avgTemperature } = req.body;
+
+    // Validate required fields
+    if (!cellId) {
+      return sendError(res, null, 'Cell ID is required', 400);
+    }
+
+    // Validate status if provided
+    if (status && !['Healthy', 'Warning', 'Critical'].includes(status)) {
+      return sendError(res, null, 'Invalid status', 400);
+    }
+
+    // Check if cell with new cellId already exists (if cellId is being changed)
+    const existingCell = await Cell.findOne({ cellId, _id: { $ne: id } });
+    if (existingCell) {
+      return sendError(res, null, 'Cell ID already exists', 400);
+    }
+
+    // Build update object
+    const updateData = { cellId };
+    if (status) updateData.status = status;
+    if (chargeCycles !== undefined) updateData.chargeCycles = chargeCycles;
+    if (avgVoltage !== undefined) updateData.avgVoltage = avgVoltage;
+    if (avgTemperature !== undefined) updateData.avgTemperature = avgTemperature;
+
+    const cell = await Cell.findByIdAndUpdate(id, updateData, { new: true });
+    if (!cell) {
+      return sendError(res, null, 'Cell not found', 404);
+    }
+
+    sendSuccess(res, cell, 'Cell updated successfully');
+  } catch (error) {
+    sendError(res, error, 'Failed to update cell');
+  }
+};
+
 // Delete cell
 const deleteCell = async (req, res) => {
   try {
@@ -127,6 +167,7 @@ const updateAnomalyStatus = async (req, res) => {
 module.exports = {
   getAllCells,
   addCell,
+  updateCell,
   deleteCell,
   getAllAnomalies,
   getAnomalyById,

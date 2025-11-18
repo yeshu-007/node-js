@@ -6,38 +6,51 @@
     <title>Admin Dashboard - Battery Health Monitor</title>
     <link rel="stylesheet" href="admin.css">
 </head>
+
 <body>
+    <!-- NAVBAR -->
     <nav class="navbar">
         <div class="nav-brand">Battery Health Monitor</div>
+
         <div class="nav-links">
             <a href="../main/index.html" class="nav-item">Dashboard</a>
             <a href="../history/history.html" class="nav-item">Historical Trends</a>
-            <a id="adminNav" class="nav-item">Admin</a>
-            <a id="loginBtn" class="nav-item">Login</a>
+
+            <!-- FIXED: Admin link is now clickable -->
+            <a id="adminNav" href="admin.html" class="nav-item">Admin</a>
+
+            <!-- FIXED: Login / logout buttons with proper href -->
+            <a id="loginBtn" href="../login/login.html" class="nav-item">Login</a>
             <a id="logoutBtn" class="nav-item" style="display:none;">Logout</a>
         </div>
     </nav>
 
     <main class="container">
+
+        <!-- -------------------- MANAGE CELLS PANEL -------------------- -->
         <section class="panel" id="manageCellsPanel">
             <h2 class="panel-title">Manage Cells</h2>
-            
+
             <div class="panel-actions">
                 <button class="btn btn-primary" id="addCellBtn">
                     <span class="btn-icon">+</span> Add Cell
                 </button>
-                <button class="btn btn-danger" id="deleteSelectedBtn" disabled>Delete Selected</button>
+                <button class="btn btn-danger" id="deleteSelectedBtn" disabled>
+                    Delete Selected
+                </button>
             </div>
 
             <div class="search-filter">
-                <input type="text" id="cellSearchInput" placeholder="Search by Cell ID or Status..." class="search-input">
+                <input type="text" id="cellSearchInput"
+                       placeholder="Search by Cell ID or Status..."
+                       class="search-input">
             </div>
 
             <div class="table-container">
                 <table class="data-table" id="cellsTable">
                     <thead>
                         <tr>
-                            <th><input type="checkbox" id="selectAllCells" title="some"></th>
+                            <th><input type="checkbox" id="selectAllCells"></th>
                             <th>Cell ID</th>
                             <th>Status</th>
                             <th>Charge Cycles</th>
@@ -47,7 +60,9 @@
                         </tr>
                     </thead>
                     <tbody id="cellsTableBody">
-                        <tr><td colspan="7" class="loading">Loading cells...</td></tr>
+                        <tr>
+                            <td colspan="7" class="loading">Loading cells...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -59,6 +74,7 @@
             </div>
         </section>
 
+        <!-- -------------------- ANOMALY HISTORY PANEL -------------------- -->
         <section class="panel" id="anomalyHistoryPanel">
             <h2 class="panel-title">Anomaly History</h2>
 
@@ -67,10 +83,12 @@
                     <label for="startDateFilter">Start Date</label>
                     <input type="datetime-local" id="startDateFilter" class="filter-input">
                 </div>
+
                 <div class="filter-group">
                     <label for="endDateFilter">End Date</label>
                     <input type="datetime-local" id="endDateFilter" class="filter-input">
                 </div>
+
                 <div class="filter-group">
                     <label for="severityFilter">Severity</label>
                     <select id="severityFilter" class="filter-input">
@@ -81,12 +99,14 @@
                         <option value="critical">Critical</option>
                     </select>
                 </div>
+
                 <div class="filter-group">
                     <label for="cellFilter">Cell ID</label>
                     <select id="cellFilter" class="filter-input">
                         <option value="">All</option>
                     </select>
                 </div>
+
                 <button class="btn btn-primary" id="applyFiltersBtn">Apply Filters</button>
                 <button class="btn btn-secondary" id="exportCsvBtn">Export CSV</button>
             </div>
@@ -102,8 +122,11 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody id="anomaliesTableBody">
-                        <tr><td colspan="5" class="loading">Loading anomalies...</td></tr>
+                        <tr>
+                            <td colspan="5" class="loading">Loading anomalies...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -114,19 +137,23 @@
                 <button class="btn btn-secondary" id="nextAnomaliesPage">Next</button>
             </div>
         </section>
+
     </main>
 
-    <div class="modal" id="addCellModal" role="dialog" aria-labelledby="addCellModalTitle" aria-modal="true">
+    <!-- -------------------- ADD CELL MODAL -------------------- -->
+    <div class="modal" id="addCellModal" role="dialog" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="addCellModalTitle">Add New Cell</h3>
-                <button class="modal-close" id="closeAddCellModal" aria-label="Close modal">&times;</button>
+                <h3>Add New Cell</h3>
+                <button class="modal-close" id="closeAddCellModal">&times;</button>
             </div>
+
             <form id="addCellForm">
                 <div class="form-group">
                     <label for="cellIdInput">Cell ID</label>
                     <input type="number" id="cellIdInput" required min="1">
                 </div>
+
                 <div class="form-group">
                     <label for="statusInput">Initial Status</label>
                     <select id="statusInput" required>
@@ -135,10 +162,22 @@
                         <option value="Critical">Critical</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label for="chargeCyclesInput">Initial Charge Cycles</label>
                     <input type="number" id="chargeCyclesInput" required min="0" value="0">
                 </div>
+
+                <div class="form-group">
+                    <label for="avgVoltageInput">Average Voltage (V)</label>
+                    <input type="number" id="avgVoltageInput" step="0.01" min="0" max="5" value="3.85">
+                </div>
+
+                <div class="form-group">
+                    <label for="avgTempInput">Average Temperature (°C)</label>
+                    <input type="number" id="avgTempInput" step="0.1" min="-50" max="100" value="28.4">
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="cancelAddCellBtn">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Cell</button>
@@ -147,34 +186,93 @@
         </div>
     </div>
 
-    <div class="modal" id="anomalyDetailModal" role="dialog" aria-labelledby="anomalyDetailModalTitle" aria-modal="true">
+    <!-- -------------------- EDIT CELL MODAL -------------------- -->
+    <div class="modal" id="editCellModal" role="dialog" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="anomalyDetailModalTitle">Anomaly Details</h3>
-                <button class="modal-close" id="closeAnomalyDetailModal" aria-label="Close modal">&times;</button>
+                <h3>Edit Cell</h3>
+                <button class="modal-close" id="closeEditCellModal">&times;</button>
             </div>
-            <div class="anomaly-details" id="anomalyDetailsContent">
+
+            <form id="editCellForm">
+                <input type="hidden" id="editCellId">
+
+                <div class="form-group">
+                    <label for="editCellIdInput">Cell ID</label>
+                    <input type="number" id="editCellIdInput" required min="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="editStatusInput">Status</label>
+                    <select id="editStatusInput" required>
+                        <option value="Healthy">Healthy</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="editChargeCyclesInput">Charge Cycles</label>
+                    <input type="number" id="editChargeCyclesInput" required min="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="editAvgVoltageInput">Average Voltage (V)</label>
+                    <input type="number" id="editAvgVoltageInput" step="0.01" min="0" max="5">
+                </div>
+
+                <div class="form-group">
+                    <label for="editAvgTempInput">Average Temperature (°C)</label>
+                    <input type="number" id="editAvgTempInput" step="0.1" min="-50" max="100">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEditCellBtn">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Update Cell
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- -------------------- ANOMALY DETAIL MODAL -------------------- -->
+    <div class="modal" id="anomalyDetailModal" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Anomaly Details</h3>
+                <button class="modal-close" id="closeAnomalyDetailModal">&times;</button>
+            </div>
+
+            <div class="anomaly-details">
                 <div class="detail-row">
                     <span class="detail-label">Timestamp:</span>
                     <span class="detail-value" id="detailTimestamp">-</span>
                 </div>
+
                 <div class="detail-row">
                     <span class="detail-label">Cell ID:</span>
                     <span class="detail-value" id="detailCellId">-</span>
                 </div>
+
                 <div class="detail-row">
                     <span class="detail-label">Severity:</span>
                     <span class="detail-value" id="detailSeverity">-</span>
                 </div>
+
                 <div class="detail-row">
                     <span class="detail-label">Description:</span>
                     <span class="detail-value" id="detailDescription">-</span>
                 </div>
+
                 <div class="detail-section">
                     <h4>Telemetry Snapshot</h4>
                     <div id="telemetrySnapshot" class="telemetry-grid"></div>
                 </div>
             </div>
+
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="closeDetailBtn">Close</button>
                 <button class="btn btn-primary" id="markReviewedBtn">Mark as Reviewed</button>
@@ -182,8 +280,11 @@
         </div>
     </div>
 
-    <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+    <div class="toast" id="toast"></div>
 
+    <!-- IMPORTANT: Correct script order -->
+    <script src="../theme.js"></script>
+    <script src="../shared.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>

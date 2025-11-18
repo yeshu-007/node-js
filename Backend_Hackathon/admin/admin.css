@@ -164,6 +164,17 @@ body {
     box-shadow: 0 4px 15px var(--glow-red);
 }
 
+.btn-info {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+}
+
+.btn-info:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.2);
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+}
+
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;

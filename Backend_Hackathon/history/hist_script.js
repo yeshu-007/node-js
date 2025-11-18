@@ -77,13 +77,36 @@ const API = {
     cellList: '/api/cells',
     historicalVoltage: '/api/cells/:id/voltage/history',
     historicalTemperature: '/api/cells/:id/temperature/history',
-    cellInfo: '/api/cells/:id/info'
+    cellInfo: '/api/cells/:id/info',
+    adminCells: '/api/admin/cells'
 };
+
+// ============ FETCH REAL CELL DATA FROM BACKEND ============
+async function fetchHistoryData() {
+    try {
+        const response = await authenticatedFetch(API.adminCells);
+        if (!response.ok) throw new Error('Failed to fetch cells');
+        
+        const data = await response.json();
+        cellsData = Array.isArray(data) ? data : (data.data || []);
+        
+        // Repopulate selector and reload current cell
+        populateCellSelector();
+        if (cellsData.length > 0) {
+            currentCellId = cellsData[0]._id;
+            loadCellData(currentCellId);
+        }
+    } catch (error) {
+        console.error('Error fetching history data:', error);
+    }
+}
 
 // ============ GLOBAL STATE ============
 let currentCellId = 1;
 let voltageChart = null;
 let temperatureChart = null;
+let cellsData = [];
+let lastDataUpdateTimestamp = null;
 
 // ============ DUMMY DATA ============
 const dummyCellData = {
@@ -132,10 +155,17 @@ const dummyCellData = {
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', () => {
     initAuthUI();
-    populateCellSelector();
+    fetchHistoryData();
     initializeCharts();
-    loadCellData(currentCellId);
     setupEventListeners();
+});
+
+// ============ SYNC WITH ADMIN CHANGES ============
+window.addEventListener('storage', (e) => {
+    if (e.key === 'dataUpdateTimestamp' && e.newValue !== lastDataUpdateTimestamp) {
+        lastDataUpdateTimestamp = e.newValue;
+        fetchHistoryData();
+    }
 });
 
 // ============ EVENT LISTENERS ============
@@ -154,24 +184,15 @@ function populateCellSelector() {
     const select = document.getElementById('cellSelector');
     if (!select) return;
 
-    // Try to get cells from API helper; fall back to dummy data
-    let cells = [];
-    try {
-        const list = fetchCellList();
-        if (Array.isArray(list) && list.length > 0) {
-            cells = list;
-        }
-    } catch (err) {
-        console.warn('Could not fetch cell list:', err);
-    }
+    // Use cellsData from backend if available
+    let cells = cellsData.length > 0 ? cellsData : Object.values(dummyCellData || {});
 
-    if (cells.length === 0) {
-        // If no dynamic list, derive from dummyCellData keys
-        cells = Object.values(dummyCellData || {}).map(c => ({ id: c.id, status: c.status }));
-    }
-
-    // Build options
-    select.innerHTML = cells.map(c => `<option value="${c.id}">${c.id} ${c.status ? '- ' + c.status : ''}</option>`).join('');
+    // Build options using _id or id field
+    select.innerHTML = cells.map(c => {
+        const cellId = c._id || c.id;
+        const displayId = c.cellId || c.id;
+        return `<option value="${cellId}">${displayId} ${c.status ? '- ' + c.status : ''}</option>`;
+    }).join('');
 
     // Set default selected value
     if (currentCellId) select.value = currentCellId;
@@ -417,27 +438,22 @@ function loadCellData(cellId) {
  * @returns {Object} Cell information
  */
 function fetchCellInfo(cellId) {
-    // TODO: Replace with actual API call
-    /*
-    try {
-        const response = await fetch(API.cellInfo.replace(':id', cellId), {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch cell info');
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching cell info:', error);
-        return null;
+    // Try to find cell in cellsData first
+    if (cellsData.length > 0) {
+        const cell = cellsData.find(c => c._id === cellId || c.id === cellId);
+        if (cell) {
+            return {
+                id: cell.cellId || cell.id,
+                avgVoltage: cell.avgVoltage || 3.85,
+                avgTemp: cell.avgTemperature || 28.4,
+                chargeCycles: cell.chargeCycles || 0,
+                status: cell.status || 'unknown',
+                lastUpdated: 'just now'
+            };
+        }
     }
-    */
     
-    // Using dummy data for standalone mode
+    // Fall back to dummy data
     console.log(`[API] Fetching cell info for Cell ${cellId}`);
     return dummyCellData[cellId];
 }
